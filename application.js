@@ -16,6 +16,9 @@ module.exports = (function() {
   var _tdxAccessToken = "";
   var _subscriptionManager = require("./subscription-manager");
   var _cache = require("./cache.js");
+  var _emaildriver = require("./email.js")
+  var emailconfig = require("./config.inbox.json");
+  var _email =new _emaildriver(emailconfig);
 
 
   var tdxConnectionHandler = function(err, reconnect) {
@@ -78,6 +81,34 @@ module.exports = (function() {
         
       }
     });
+    /*
+    * get email
+    */
+    app.get('/email', function (req, res,next) {
+      //if (!_tdxAccessToken || _tdxAccessToken.length === 0) {
+      //  res.redirect("/login");
+      //} else {
+        _email.getInbox(function(err,ans){
+          if(err)
+          log(err);
+          else{
+            res.render("email",{messages:ans});
+          }
+        })
+      //}
+    });
+    /*
+    * ----------------send email--------------------
+    */
+    app.post('send',function(req,res,next){
+      var msgheader = req.body.message;
+      var msgcontent = req.body.content;
+
+      log(msgheader);
+
+      res.send
+    })
+    /******************************************************************************************s**/
     
     app.get("/logout", function(request, response) {
       _tdxAccessToken = "";

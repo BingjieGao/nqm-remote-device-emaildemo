@@ -9,6 +9,8 @@
   "author": "toby.ealden@gmail.com",
   "license": "ISC",
   "dependencies": {
-    "minimist": "^1.2.0"
+    "body-parser": "^1.15.2",
+    "minimist": "^1.2.0",
+    "nqm-api-tdx": "git+https://github.com/nqminds/nqm-api-tdx.git"
   }
 }

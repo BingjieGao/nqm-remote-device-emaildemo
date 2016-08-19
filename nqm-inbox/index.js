@@ -4,13 +4,13 @@
 
 (function() {
   "use strict";
-  
-  var WatchDog = require("./watchdog");
-  var watcher = new WatchDog(process.argv.slice(2));
-  watcher.run();
+  //
+  //var WatchDog = require("./watchdog");
+  //var watcher = new WatchDog(process.argv.slice(2));
+  //watcher.run();
   
   var App = require("./lib/main");
-  var app = new App(process.argv.slice(2), watcher);
+  var app = new App();
   return app.run();
 }());
 
