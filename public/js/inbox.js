@@ -11,6 +11,7 @@ function send() {
   var new_content = $$("mail-content").getValue();
   new_content = {html:new_content};
   console.log(new_content);
+  //webix.message(new_message, null, 2);
   webix.ajax().post("/send",{message:new_message,content:new_content},function(text,data,xmlHttpRequest){
     console.log(text);
     console.log(xmlHttpRequest);
@@ -241,9 +242,13 @@ webix.ready(function() {
    * delete selected email
    */
   $$('id_delete').attachEvent('onItemClick',function(id,e){
-    console.log(gData[$$('$datatable1').getSelectedId().id-1]);
-    webix.ajax().del("/message?id="+gData[$$('$datatable1').getSelectedId().id-1].msgid,function(text, data, XmlHttpRequest){
+    var this_msg = findContent($$('$datatable1').getSelectedId());
+    console.log(this_msg['uid']);
+    webix.ajax().put("/message",{message:this_msg},function(text, data, XmlHttpRequest){
       console.log('delete message'+text);
+      if(xmlHttpRequest.readyState == 4 && XmlHttpRequest.status == 200){
+        webix.message('sent success',null,20);
+      }
     })
   });
 

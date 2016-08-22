@@ -16,9 +16,15 @@ module.exports = (function() {
   var _tdxAccessToken = "";
   var _subscriptionManager = require("./subscription-manager");
   var _cache = require("./cache.js");
+
+  var bodyParser = require('body-parser');
   var _emaildriver = require("./email.js")
   var emailconfig = require("./config.inbox.json");
   var _email =new _emaildriver(emailconfig);
+  var _filedriver = require('./fileCache');
+  var _fileCache = new _filedriver(emailconfig);
+  var syncdriver = require('./sync');
+  var _sync = null;
 
 
   var tdxConnectionHandler = function(err, reconnect) {
@@ -42,6 +48,9 @@ module.exports = (function() {
     app.set('view engine', 'jade');
     app.use(express.static(__dirname  + '/public'));
     app.use('/viewer', express.static('node_modules/node-viewerjs/release'));
+
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({ extended: false }));
 
     app.get('/', function (req, res) {
       if (!_tdxAccessToken || _tdxAccessToken.length === 0) {
@@ -68,6 +77,11 @@ module.exports = (function() {
         _tdxAccessToken = q.access_token;
         _subscriptionManager.setAccessToken(q.access_token);
         response.writeHead(301, {Location: config.hostURL});
+
+        /*assign _sync value with tdxAccessToken*/
+        _sync = new syncdriver(emailconfig,_tdxAccessToken);
+        /*-------------------------------------------------*/
+
         response.end();
       }
     });
@@ -85,9 +99,10 @@ module.exports = (function() {
     * get email
     */
     app.get('/email', function (req, res,next) {
-      //if (!_tdxAccessToken || _tdxAccessToken.length === 0) {
-      //  res.redirect("/login");
-      //} else {
+      if (!_tdxAccessToken || _tdxAccessToken.length === 0) {
+        res.redirect("/login");
+      } else {
+        _fileCache.setSyncHandler(_sync);
         _email.getInbox(function(err,ans){
           if(err)
           log(err);
@@ -95,20 +110,58 @@ module.exports = (function() {
             res.render("email",{messages:ans});
           }
         })
-      //}
+      }
     });
     /*
     * ----------------send email--------------------
     */
-    app.post('send',function(req,res,next){
+    app.post("/send",function(req,res,next){
+      log('send');
       var msgheader = req.body.message;
       var msgcontent = req.body.content;
-
       log(msgheader);
+      /*----------------- directly send ----------------------------------------*/
+      //_email.send(JSON.parse(msgheader),JSON.parse(msgcontent),function(err,ans){
+      //  if(err){
+      //    log(err);
+      //  }
+      //  else{
+      //    res.end('SUCCESS');
+      //  }
+      //})
+      /*----------------- end directly send -------------------------------------*/
+      var sentData = {
+        "uid":Date.now(),
+        "modseq":1,
+        "flags":"\\Sent",
+        "textcount":msgcontent.length,
+        "text":msgcontent,
+        "to":msgheader['To'],
+        "subject":msgheader['Subject'],
+        "date":Date.now()
+      }
+      var sentObj = {
+        id:emailconfig.byodimapboxes_ID,
+        d:sentData
+      }
+      _fileCache.cacheThis(sentObj);
 
-      res.send
     })
     /******************************************************************************************s**/
+
+    app.put(/message/,function(req,res,next){
+      log('msg is '+req.body.message);
+      var updatemsg = req.body.message;
+      _email.update(updatemsg,_fileCache,function(err,ans){
+        if(err) {
+          log(err);
+        }
+        else {
+          log(ans);
+          res.end('SUCCESS');
+        }
+      });
+    })
     
     app.get("/logout", function(request, response) {
       _tdxAccessToken = "";

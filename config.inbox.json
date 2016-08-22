@@ -4,5 +4,11 @@
   "accessTokenTTL": 864000,
   "byodimapboxes_token":"ByeXRY3u_",
   "byodimapboxes_ID":"BkgqbMqe5",
-  "byodimapboxes_Pass":"1234554321"
+  "byodimapboxes_Pass":"1234554321",
+  "rootPath": "cache",
+  "transmitCheckFrequency": 10000,
+  "maximumTransmitKB": 250,
+  "transportTimeout": 600000,
+  "archive": true,
+  "pendingPacketThreshold": 1
 }
