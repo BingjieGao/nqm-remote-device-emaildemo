@@ -1,7 +1,6 @@
 module.exports = (function() {
   var log = require("debug")("email");
   var config = require("./config.json");
-  var base64url = require("base64url");
   var http = require("http");
   var https = require("https");
   var gRequest = require('request');
