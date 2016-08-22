@@ -66,10 +66,10 @@ var ui = { rows:[
                 ]
                 }
               ]
-            },
-            {
-              view: "calendar", css: "rounded_bottom"
             }
+            //{
+            //  view: "calendar", css: "rounded_bottom"
+            //}
           ]
 
         },
