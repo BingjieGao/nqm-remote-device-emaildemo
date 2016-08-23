@@ -219,6 +219,7 @@ webix.ready(function() {
    */
   $$("id_create").attachEvent("onItemClick",function(id,e){
     console.log('create clicked');
+    $$("$datatable1").clearSelection();
     webix.ui(popup).show();
   })
 
