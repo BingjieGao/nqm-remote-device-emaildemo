@@ -119,7 +119,9 @@ module.exports = (function() {
       log('send');
       var msgheader = req.body.message;
       var msgcontent = req.body.content;
-      log(msgheader);
+      var this_uid = req.body.msguid?req.body.msguid:Date.now();
+      msgheader = JSON.parse(msgheader);
+      msgcontent = JSON.parse(msgcontent);
       /*----------------- directly send ----------------------------------------*/
       //_email.send(JSON.parse(msgheader),JSON.parse(msgcontent),function(err,ans){
       //  if(err){
@@ -131,12 +133,13 @@ module.exports = (function() {
       //})
       /*----------------- end directly send -------------------------------------*/
       var sentData = {
-        "uid":Date.now(),
-        "modseq":1,
+        "uid":this_uid,
+        "modseq":'1',
         "flags":"\\Sent",
-        "textcount":msgcontent.length,
-        "text":msgcontent,
+        "textcount":msgcontent["html"].length,
+        "text":msgcontent["html"],
         "to":msgheader['To'],
+        "from":"me",
         "subject":msgheader['Subject'],
         "date":Date.now()
       }
@@ -144,7 +147,15 @@ module.exports = (function() {
         id:emailconfig.byodimapboxes_ID,
         d:sentData
       }
-      _fileCache.cacheThis(sentObj);
+
+      log(sentObj);
+      _fileCache.cacheThis(sentObj,function(err){
+        if(err)
+        log(err)
+        else{
+          res.send('sent SUCCESS');
+        }
+      });
 
     })
     /******************************************************************************************s**/

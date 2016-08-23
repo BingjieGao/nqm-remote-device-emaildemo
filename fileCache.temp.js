@@ -1,10 +1,10 @@
-"use strict";
-
 module.exports = (function() {
   var console = { log: require("debug")("fileCache") }
 
   var pendingPath = "pending";
+  var pendingDeletePath = "deletepending";
   var transmitPath = "transmit";
+  var transmitdeletePath = "update";
   var archivePath = "archive";
   var fs = require("fs");
   var path = require("path");
@@ -23,7 +23,7 @@ module.exports = (function() {
   }
 
   function findNextPendingFile() {
-    var pendingFile, transmitFile;
+    var pendingFile, transmitFile
     do {
       this._pendingFileCount++;
       pendingFile = path.join(dirname, this._config.rootPath, pendingPath, this._pendingFileCount + '.log');
@@ -31,6 +31,16 @@ module.exports = (function() {
     } while(fs.existsSync(pendingFile) || fs.existsSync(transmitFile));
 
     return pendingFile;
+  }
+  function findNextdeletePendingFile() {
+    var pendingdeleteFile, transmitdeleteFile
+    do {
+      this._pendingdeleteFileCount++;
+      pendingdeleteFile = path.join(dirname, this._config.rootPath, pendingdeletePath, this._pendingdeleteFileCount + '.log');
+      transmitdeleteFile = path.join(dirname, this._config.rootPath, transmitdeletePath, this._pendingdeleteFileCount + '.log');
+    } while(fs.existsSync(pendingdeleteFile) || fs.existsSync(transmitdeleteFile));
+
+    return pendingdeleteFile;
   }
 
   function movePendingFiles(rootPath) {
@@ -44,6 +54,17 @@ module.exports = (function() {
       pendingToTransmit(rootPath,pendingFile);
     }
   }
+  function movedeletePendingFiles(rootPath) {
+    // Clear pending folder.
+    console.log("moving pending logs to transmit folder");
+    var pendingdeleteFiles = fs.readdirSync(path.join(dirname, rootPath, pendingDeletePath));
+
+    // Move files from pending to transmit folder.
+    for (var i = 0, len = pendingdeleteFiles.length; i < len; i++) {
+      var pendingdeleteFile = path.join(dirname, rootPath, pendingdeletePath, pendingdeleteFiles[i]);
+      deletependingToTransmit(rootPath,pendingdeleteFile);
+    }
+  }
 
   function pendingToTransmit(rootPath, file) {
     var fileOnly = path.basename(file);
@@ -51,6 +72,19 @@ module.exports = (function() {
     try {
       if (!fs.existsSync(transmitFile)) {
         fs.renameSync(file,transmitFile);
+      } else {
+        //logger.info("couldn't move file to transmit - file already exists");
+      }
+    } catch (e) {
+      logger.error("failed to move file from pending to transmit");
+    }
+  }
+  function deletependingToTransmit(rootPath, file) {
+    var fileOnly = path.basename(file);
+    var transmitdeleteFile = path.join(dirname,rootPath, transmitdeletePath, fileOnly);
+    try {
+      if (!fs.existsSync(transmitdeleteFile)) {
+        fs.renameSync(file,transmitdeleteFile);
       } else {
         //logger.info("couldn't move file to transmit - file already exists");
       }
@@ -82,7 +116,7 @@ module.exports = (function() {
    * Send the given payload via the sync transport.
    * Start a timer to monitor sync timeouts (e.g. if the server fails to respond, retry).
    */
-  function doSync(transmitId,transmitPayload,cb) {
+  function doSync(transmitPayload,cb) {
     var self = this;
 
     if (self._timeoutTimer === 0) {
@@ -90,7 +124,7 @@ module.exports = (function() {
       self._timeoutTimer = setTimeout(function() { onTransportTimeOut.call(self,cb); }, self._config.transportTimeout);
 
       console.log("transmitting data: " + transmitPayload.length + " bytes");
-      self._sync.sendData(transmitId,transmitPayload, function(err, resp) {
+      self._sync.sendData(transmitPayload, function(err, resp) {
         // Cancel timeout.
         if (self._timeoutTimer !== 0) {
           clearTimeout(self._timeoutTimer);
@@ -128,7 +162,8 @@ module.exports = (function() {
 
   function startTransmitTimer() {
     stopTransmitTimer.call(this);
-    this._transmitTimer = setTimeout(transmitData.bind(this),this._config.transmitCheckFrequency);
+    this._transmitTimer = setTimeout(transmitData.bind(this,transmitPath),this._config.transmitCheckFrequency);
+    this._transmitdeleteTimer = setTimeout(transmitData.bind(this,transmitdeletePath),this._config.transmitCheckFrequency);
   }
 
   function stopTransmitTimer() {
@@ -137,46 +172,41 @@ module.exports = (function() {
       this._transmitTimer = 0;
     }
   }
+  function stopTransmitdeleteTimer() {
+    if (this._transmitdeleteTimer !== 0) {
+      clearTimeout(this._transmitdeleteTimer);
+      this._transmitdeleteTimer = 0;
+    }
+  }
 
   /*
    * Look for files in transmit folder and concatenate their contents
    * to form a payload for transmission.
    * Only delete the local files if the transmission is successful.
    */
-  function transmitData() {
+  function transmitData(tPath) {
     var self = this;
 
-
     self._transmitFiles = [];
-    var directory = path.join(dirname, self._config.rootPath, transmitPath);
+    var directory = path.join(dirname, self._config.rootPath, tPath);
 
     var transmitDirectory = function(directory, err, files) {
       var transmitCandidates = files.map(function(f) { return path.join(directory, f); });
 
       if (transmitCandidates.length > 0) {
-
         var transmitPayload = "";
-        var oldId = "";
+
         var transmitFile = function(i, cb) {
           var file = transmitCandidates[i];
-
           fs.readFile(file, { encoding: "utf8", flag: "r"}, function(err, fileData) {
             if (err) {
               // Continue processing subsequent files?
               console.log("failed to read file %s [%s]", file, err.message);
             } else {
               // Accumulate the contents of the files into a single payload string, no larger than config.maximumTransmitKB
-
               if (fileData.length > 0) {
-                console.log(fileData);
-                if(oldId.length <= 0){
-                  console.log('transmitData called');
-                  oldId = JSON.parse(fileData)["id"];
-                }
-                console.log('oldid is '+oldId);
-                if (transmitPayload.length > 0 && oldId == JSON.parse(fileData)["id"]) {
+                if (transmitPayload.length > 0) {
                   transmitPayload += ",";
-                  oldId = JSON.parse(fileData)["id"];
                 }
                 transmitPayload += JSON.stringify(JSON.parse(fileData)["d"]);
               }
@@ -197,7 +227,10 @@ module.exports = (function() {
             startTransmitTimer.call(self);
           } else {
             console.log("transmitting " + transmitPayload.length + " bytes");
-            doSync.call(self, oldId,"[" + transmitPayload + "]", function(ok) {
+            doSync.call(self, "["+transmitPayload+"]", function(ok) {
+              console.log('dosync');
+              console.log(transmitPayload);
+              console.log('dosync'+ok);
               if (ok === true) {
                 console.log("transmit success");
                 deleteFiles(self._transmitFiles);
@@ -225,16 +258,22 @@ module.exports = (function() {
     this._config = config;
     this._sync = null;
     this._transmitTimer = 0;
+    this._transmitdeleteTimer = 0;
     this._pendingFileCount = 0;
+    this._pendingdeleteFileCount = 0;
     this._pendingPacketCount = 0;
+    this._pendingdeletePacketCount = 0;
     this._transmitFiles = [];
     this._timeoutTimer = 0;
 
     this._config.rootPath = this._config.rootPath || "";
+    console.log(this._config.rootPath);
     createFolder(this._config.rootPath);
     createFolder(path.join(this._config.rootPath, pendingPath));
     createFolder(path.join(this._config.rootPath, transmitPath));
     createFolder(path.join(this._config.rootPath, archivePath));
+    createFolder(path.join(this._config.rootPath, pendingDeletePath));
+    createFolder(path.join(this._config.rootPath, transmitdeletePath));
 
     findNextPendingFile.call(this);
   }
@@ -260,7 +299,6 @@ module.exports = (function() {
     }catch(e){
       cb(e);
     }
-    cb(null);
     if (this._pendingPacketCount > 0) {
       fs.appendFileSync(pendingFile,",");
     }
@@ -273,9 +311,38 @@ module.exports = (function() {
       this._pendingPacketCount = 0;
     }
   };
+  FileCache.prototype.cachedeleteThis = function(dataIn,cb){
+    var data = JSON.stringify(dataIn);
+
+    // Add packet to archive file.
+    if (this._config.archive) {
+      var archiveFile = path.join(dirname, this._config.rootPath, archivePath,'store.json');
+      fs.appendFileSync(archiveFile,data + "\n");
+    }
+
+    // Add packet to pending file
+    var pendingdeleteFile = path.join(dirname, this._config.rootPath, pendingDeletePath, this._pendingdeleteFileCount + '.log');
+    try{
+      fs.appendFileSync(pendingdeleteFile,data);
+    }catch(e){
+      cb(e);
+    }
+    if (this._pendingdeletePacketCount > 0) {
+      fs.appendFileSync(pendingdeleteFile,",");
+    }
+
+    this._pendingdeletePacketCount++;
+
+    if (this._pendingdeletePacketCount === this._config.pendingPacketThreshold) {
+      movedeletePendingFiles(this._config.rootPath);
+      findNextdeletePendingFile.call(this);
+      this._pendingdeletePacketCount = 0;
+    }
+  }
 
   FileCache.prototype.stop = function() {
     stopTransmitTimer.call(this);
+    stopTransmitdeleteTimer.call(this);
   };
 
   return FileCache;

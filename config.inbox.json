@@ -6,9 +6,9 @@
   "byodimapboxes_ID":"BkgqbMqe5",
   "byodimapboxes_Pass":"1234554321",
   "rootPath": "cache",
-  "transmitCheckFrequency": 10000,
+  "transmitCheckFrequency": 5000,
   "maximumTransmitKB": 250,
   "transportTimeout": 600000,
-  "archive": true,
+  "archive": false,
   "pendingPacketThreshold": 1
 }

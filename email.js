@@ -90,7 +90,7 @@ module.exports = (function() {
       uid:msg['uid'],
       textcount:msg['textcount'],
       text:msg['text'],
-      flags:"deleted",
+      flags:"\\deleted",
       modseq:msg['modseq'],
       from:msg['from'],
       to:msg['to'],
@@ -108,8 +108,12 @@ module.exports = (function() {
     //  else
     //  cb(null,'deleted');
     //})
-    fileCache.cacheThis(updateObj);
-
+    fileCache.cacheThis(updateObj,function(err){
+      if(err)
+      cb(err);
+      else
+      cb(null);
+    });
 
   }
 
