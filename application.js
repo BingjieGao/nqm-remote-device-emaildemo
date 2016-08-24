@@ -13,7 +13,8 @@ module.exports = (function() {
   var _tdxConnection = require("./tdxConnection");
   var _appServer = require("./appServer");
   var _ = require("lodash");
-  var _tdxAccessToken = "";
+  var tokenPath = 'tdxToken.json';
+  var _tdxAccessToken = ""
   var _subscriptionManager = require("./subscription-manager");
   var _cache = require("./cache.js");
 
@@ -25,6 +26,13 @@ module.exports = (function() {
   var _fileCache = new _filedriver(emailconfig);
   var syncdriver = require('./sync');
   var _sync = null;
+  var fs = require('fs');
+
+  fs.stat('./'+tokenPath,function(err,stats){
+    if(!err)
+    _tdxAccessToken = require('./'+tokenPath).token;
+    _sync = new syncdriver(emailconfig,_tdxAccessToken);
+  })
 
 
   var tdxConnectionHandler = function(err, reconnect) {
@@ -40,8 +48,6 @@ module.exports = (function() {
   
   var _start = function(config) {  
 
-
-    
     var app = express();
   
     app.set("views", __dirname + "/views");
@@ -52,10 +58,12 @@ module.exports = (function() {
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: false }));
 
+
     app.get('/', function (req, res) {
       if (!_tdxAccessToken || _tdxAccessToken.length === 0) {
         res.redirect("/login");
       } else {
+        log('tdxToken exist');
         res.render("apps", { config: config });
       }
     });
@@ -81,8 +89,15 @@ module.exports = (function() {
         /*assign _sync value with tdxAccessToken*/
         _sync = new syncdriver(emailconfig,_tdxAccessToken);
         /*-------------------------------------------------*/
-
-        response.end();
+        /*--------------- save token json -----------------*/
+        var tdxTokenObj = {
+          token:_tdxAccessToken
+        }
+        fs.writeFile(tokenPath,JSON.stringify(tdxTokenObj),{encoding:'utf8',flag:'w'},function(err){
+          if(!err)
+            response.end();
+        })
+        /*-------------------------------------------------*/
       }
     });
     
@@ -103,7 +118,7 @@ module.exports = (function() {
         res.redirect("/login");
       } else {
         _fileCache.setSyncHandler(_sync);
-        _email.getInbox(function(err,ans){
+        _email.getInbox(_tdxAccessToken,function(err,ans){
           if(err)
           log(err);
           else{
@@ -167,13 +182,13 @@ module.exports = (function() {
     app.put(/message/,function(req,res,next){
       log('msg is '+req.body.message);
       var updatemsg = req.body.message;
-      _email.update(updatemsg,_fileCache,function(err,ans){
+      _email.update(updatemsg,_fileCache,function(err){
         if(err) {
           log(err);
         }
         else {
-          log(ans);
-          res.end('SUCCESS');
+          log('deleted success');
+          res.send('deleted SUCCESS');
         }
       });
     })

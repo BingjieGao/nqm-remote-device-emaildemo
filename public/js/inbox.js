@@ -35,7 +35,27 @@ function findContent(messageId){
   }
   return content;
 }
-var ui = { rows:[
+var gridtable = {
+    container:"thetable",
+    view:"datatable",css: "rounded_top", scrollX:false,
+    columns:[
+      { id:"ch1", header:{ content:"masterCheckbox" }, template:"{common.checkbox()}",checkValue:'on', uncheckValue:'off', css:"center", width: 40 },
+      { id:"from", width: 250, header:"From" },
+      { id:"subject", header:"Subject", fillspace:true },
+      { id:"date", header:"Date", width: 150 }
+    ],
+    select:"row",
+    pager:{
+      id:"pagerA",
+      size:5,
+      group:10,
+      apiOnly:true
+    },
+    data:gData,
+    ready:function(){
+      console.log(gData);
+    }};
+var ui = {rows:[
   {
     type: "space",
     rows:[
@@ -80,24 +100,15 @@ var ui = { rows:[
 
         },
         { type:"wide",rows:[
-          { view:"datatable",css: "rounded_top", scrollX:false, columns:[
-            { id:"ch1", header:{ content:"masterCheckbox" }, template:"{common.checkbox()}",checkValue:'on', uncheckValue:'off', css:"center", width: 40 },
-            { id:"from", width: 250, header:"From" },
-            { id:"subject", header:"Subject", fillspace:true },
-            { id:"date", header:"Date", width: 150 }
-          ], select:"row", data:gData, ready:function(){
-            console.log(gData);
-            //webix.delay(function(){
-            //this.select(2); //default select the first one
-            //},this);
-          }},
+          gridtable,
           { height: 45, cols:[
             { view:"button", id: "id_reply", type: "icon",  label:"Reply", icon:"reply", width: 95, hidden: true},
             { view:"button", id: "id_replyall", type: "icon", label:"Reply All", icon:"reply-all", width: 100, hidden: false },
             { view:"button", id: "id_delete", type: "icon", label:"Delete", icon:"times", width: 95,hidden:true },
             {},
-            { view:"button", id: "id_prev", type: "icon", icon: "angle-double-left", width: 30 },
-            { view:"button", id: "id_next", type: "icon", icon: "angle-double-right", width: 30 }
+            { view:"button", id: "id_prev", type: "icon", icon: "angle-double-left", width: 30, click:prev_page},
+            { view:"button", id: "id_next", type: "icon", icon: "angle-double-right", width: 30, click:next_page }
+
           ]},
           {view:"template", id: "mailview", scroll:"y", template:"No message available"}
         ]}
@@ -180,10 +191,22 @@ var settings = {
     }}
   }
 };
-
+function prev_page(){
+  $$("pagerA").select("prev");
+}
+function next_page(){
+  $$("pagerA").select("next");
+}
 webix.ready(function() {
 
   webix.ui(ui);
+  //gridtable = webix.ui(gridtable);
+  //gridtable.getPager().clone({
+  //  template:"{common.first()} {common.prev()} {common.pages()} {common.next()} {common.last()}",
+  //  container:"apage",
+  //  size:10,
+  //  group:5
+  //});
   webix.ui(settings);
 
   $$("$datatable1").bind($$("$tree1"),function(obj,filter){
@@ -254,8 +277,9 @@ webix.ready(function() {
     console.log(this_msg['uid']);
     webix.ajax().put("/message",{message:this_msg},function(text, data, XmlHttpRequest){
       console.log('delete message'+text);
-      if(xmlHttpRequest.readyState == 4 && XmlHttpRequest.status == 200){
-        webix.message('deleted success',null,20);
+
+      if(XmlHttpRequest.readyState == 4 && XmlHttpRequest.status == 200){
+        webix.message('deleted success',null,200);
       }
     })
   });

@@ -11,6 +11,8 @@ module.exports = (function() {
   var readline = require('readline');
   var nodemailer = require('nodemailer');
   var request = require("request");
+  var _ = require('lodash');
+  var fs = require('fs');
 
   var handleError = function(err, response, log, cb) {
     if (err || response.statusCode !== 200 || (response.body && response.body.error)) {
@@ -49,35 +51,38 @@ module.exports = (function() {
     });
   }
   /*---------------------------end upsert function ---------------------------*/
-  Inbox.prototype.getInbox = function(cb){
+  Inbox.prototype.getInbox = function(tdxToken,cb){
     var self = this;
     log(self._config.byodimapboxes_ID);
     log('authenticate');
-    self._tdxAPI.authenticate(self._config.byodimapboxes_token, self._config.byodimapboxes_Pass, function (err, accessToken) {
-      if (err == null) {
-        log('err null');
-        log(self._config.byodimapboxes_ID);
-        self._tdxAPI.query("datasets/" + self._config.byodimapboxes_ID + "/data", null, null, null, function (qerr, data) {
-          if (qerr){
-            cb(qerr,null);
-          }
-          if(data != null){
-            var data_array = data.data;
-            for(var i=0;i<data_array.length-1;){
-              data_array[i]['folder'] = 1;
-              //data_array[i]['id'] = data_array[i]['uid'];
-              //data_array[i+1]['id'] = data_array[i+1]['uid'];
-              data_array[i+1]['folder'] = 2;
-              i +=2;
+      self._tdxAPI.query("datasets/" + self._config.byodimapboxes_ID + "/data", null, null, null, tdxToken,function (qerr, data) {
+        if (qerr){
+          cb(qerr,null);
+        }
+        if(data != null){
+          var data_array = data.data;
+          for(var i=0;i<data_array.length;i++){
+            switch(data_array[i]["flags"]){
+              case "\\deleted":
+                data_array[i]['folder'] = 4;
+                break;
+              case "\\Seen":
+                data_array[i]['folder'] = 1;
+                break;
+              case "\\Sent":
+                data_array[i]['folder'] = 2;
             }
-            cb(null,data_array);
           }
-        });
-      }
-      else
-        cb(err,null);
-    });
-  }
+          cb(null,data_array);
+          fs.writeFile('inbox.json',JSON.stringify(data_array,null,4),{encoding:"utf8",flag:"w"},function(err){
+            if(err)
+            log(err);
+            else
+            log('save done');
+          })
+        }
+      });
+    }
 
   Inbox.prototype.update = function(msg,fileCache,cb){
     var self = this;
