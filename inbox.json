@@ -366,6 +366,30 @@
         "folder": 2
     },
     {
+        "uid": 1472035704131,
+        "modseq": "1",
+        "flags": "\\Sent",
+        "textcount": 84,
+        "text": "<p><strong>world<span style=\"text-decoration: underline;\"> hello</span></strong></p>",
+        "to": "123@gmail.com",
+        "from": "me",
+        "subject": "hello",
+        "date": "2016-08-24T10:48:24.131Z",
+        "folder": 2
+    },
+    {
+        "uid": 1472035775026,
+        "modseq": "1",
+        "flags": "\\Sent",
+        "textcount": 38,
+        "text": "<p><em><strong>world</strong></em></p>",
+        "to": "1234@gmail.com",
+        "from": "me",
+        "subject": "hello",
+        "date": "2016-08-24T10:49:35.026Z",
+        "folder": 2
+    },
+    {
         "uid": 13,
         "modseq": "2271",
         "to": "byod23145842@gmail.com",

@@ -1,6 +1,6 @@
 function loadDocument(fileName) {
 //  $$("docView").load("/viewer/#/fileCache/"+fileName);
-  document.getElementsByClassName("webix_template")[0].innerHTML = '<iframe src="/viewer/#/fileCache/'+fileName+'" width="100%" height="100%"></iframe>';
+  document.getElementsByClassName("webix_template")[0].innerHTML = '<iframe src="/viewer/#/../../docViews/'+fileName+'" width="100%" height="100%"></iframe>';
 }
 
 function findParent(needle, haystack, payload) {

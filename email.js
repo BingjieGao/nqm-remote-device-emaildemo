@@ -13,6 +13,7 @@ module.exports = (function() {
   var request = require("request");
   var _ = require('lodash');
   var fs = require('fs');
+  var sendPath = "./sent.json";
 
   var handleError = function(err, response, log, cb) {
     if (err || response.statusCode !== 200 || (response.body && response.body.error)) {
@@ -83,7 +84,7 @@ module.exports = (function() {
         }
       });
     }
-
+  /*--------------------------- update function ---------------------------*/
   Inbox.prototype.update = function(msg,fileCache,cb){
     var self = this;
     log(self._config.commandHost);
@@ -121,9 +122,11 @@ module.exports = (function() {
     });
 
   }
-
-  Inbox.prototype.send = function(msgheader,text,cb){
+  /*--------------------------- END update function ---------------------------*/
+  Inbox.prototype.send = function(msgheader,msgcontent,cb){
+    var self = this;
     log('send email');
+    var replyTo = msgheader['uid']>0?msgheader['uid']:"";
     var transporter = nodemailer.createTransport({
       service: 'Gmail',
       auth: {
@@ -136,14 +139,64 @@ module.exports = (function() {
       to: msgheader['To'],
       cc: msgheader['Cc'],
       subject: msgheader['Subject'],
-      html: text.html
+      html: msgcontent['html']
     }
+    var sentData = {
+      "uid":msgheader['uid'],
+      "modseq":'1',
+      "flags":"\\Sent",
+      "textcount":msgcontent["html"].length,
+      "text":msgcontent["html"],
+      "to":msgheader['To'],
+      "from":"me",
+      "subject":msgheader['Subject'],
+      "date":Date.now()
+    }
+
+    log('sent results are');
+
+
+    if(replyTo.length>0){
+      var InReplyTo = {
+        "In-Reply-To":replyTo
+      }
+      _.assign(mailOptions,InReplyTo);
+      _assign(sentData,InReplyTo);
+    }
+    var sentObj = {
+      id:self._config.byodimapboxes_ID,
+      d:sentData
+    }
+    log(sentObj);
+    log(mailOptions);
 
     transporter.sendMail(mailOptions,function(err,info){
       if(err){
-        cb(err,null);
+        log(err);
+        cb(err,sentObj);
       }
-      cb(null,info.response);
+      else {
+        cb(null, info.response);
+      }
+    })
+  }
+  /*--------------------------- END send function ----------------------------*/
+  Inbox.prototype.getAttachmentsList = function(tdxToken,cb){
+    var self = this;
+    self._tdxAPI.query("datasets/" + self._config.byodattachment_ID + "/data", null, null, null, tdxToken,function (qerr, data) {
+      if(qerr) {
+        log(qerr);
+        cb(qerr,null);
+      }
+      else{
+        log('attachemnt ids are ');
+        fs.writeFile('attachments.json',JSON.stringify(data,null,4),{encoding:"utf8",flag:"w"},function(err){
+          if(err)
+            cb(err,null);
+          else
+            cb(null,data);
+        });
+      }
     })
   }
   return Inbox;

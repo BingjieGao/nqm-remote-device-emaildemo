@@ -29,9 +29,17 @@ module.exports = (function() {
   var fs = require('fs');
 
   fs.stat('./'+tokenPath,function(err,stats){
-    if(!err)
-    _tdxAccessToken = require('./'+tokenPath).token;
-    _sync = new syncdriver(emailconfig,_tdxAccessToken);
+    if(!err) {
+      var TokenObj = require('./'+tokenPath);
+      //if the accessToken is expired
+      log('time is ');
+      log(TokenObj);
+      log(TokenObj.timestamp);
+      if(Date.now()/1000-TokenObj.timestamp/1000<3590) {
+        _tdxAccessToken = require('./' + tokenPath).token;
+        _sync = new syncdriver(emailconfig, _tdxAccessToken);
+      }
+    }
   })
 
 
@@ -91,7 +99,8 @@ module.exports = (function() {
         /*-------------------------------------------------*/
         /*--------------- save token json -----------------*/
         var tdxTokenObj = {
-          token:_tdxAccessToken
+          token:_tdxAccessToken,
+          timestamp:Date.now()
         }
         fs.writeFile(tokenPath,JSON.stringify(tdxTokenObj),{encoding:'utf8',flag:'w'},function(err){
           if(!err)
@@ -100,7 +109,7 @@ module.exports = (function() {
         /*-------------------------------------------------*/
       }
     });
-    
+    /*---------------- get files -----------------------------*/
     app.get("/files", function(request, response) {
 
       if (!_tdxAccessToken || _tdxAccessToken.length === 0) response.redirect("/login");
@@ -110,6 +119,22 @@ module.exports = (function() {
         
       }
     });
+    /*------------------END-------------------------------------*/
+    app.get(/attachment/,function(req,res,next){
+      if(!_tdxAccessToken || _tdxAccessToken.length === 0)
+      res.redirect("/login");
+      else{
+        _email.getAttachmentsList(_tdxAccessToken,function(err,data){
+          if(err)
+          log(err)
+          else
+          log(data['data']);
+          _cache.getAttachments(_tdxAccessToken,data["data"],function(){
+
+          })
+        })
+      }
+    })
     /*
     * get email
     */
@@ -119,10 +144,25 @@ module.exports = (function() {
       } else {
         _fileCache.setSyncHandler(_sync);
         _email.getInbox(_tdxAccessToken,function(err,ans){
-          if(err)
-          log(err);
+          if(err) {
+            log(err);
+            res.redirect("/login");
+          }
           else{
-            res.render("email",{messages:ans});
+            _email.getAttachmentsList(_tdxAccessToken,function(err,attachments){
+              if(err)
+                log(err);
+              else {
+                log(attachments['data']);
+                _cache.getAttachments(_tdxAccessToken, attachments["data"], function (error) {
+                  if (error)
+                    log(error);
+                  else {
+                    res.render("email", {messages: ans,attachments:attachments["data"]});
+                  }
+                })
+              }
+            })
           }
         })
       }
@@ -134,47 +174,56 @@ module.exports = (function() {
       log('send');
       var msgheader = req.body.message;
       var msgcontent = req.body.content;
-      var this_uid = req.body.msguid?req.body.msguid:Date.now();
+      var this_uid = req.body.msguid?req.body.msguid:0;
       msgheader = JSON.parse(msgheader);
       msgcontent = JSON.parse(msgcontent);
       if(!_.isNumber(this_uid)){
         log(this_uid);
         this_uid = parseInt(this_uid);
       }
+      msgheader['uid'] = this_uid;
       /*----------------- directly send ----------------------------------------*/
-      //_email.send(JSON.parse(msgheader),JSON.parse(msgcontent),function(err,ans){
-      //  if(err){
-      //    log(err);
-      //  }
-      //  else{
-      //    res.end('SUCCESS');
-      //  }
-      //})
-      /*----------------- end directly send -------------------------------------*/
-      var sentData = {
-        "uid":this_uid,
-        "modseq":'1',
-        "flags":"\\Sent",
-        "textcount":msgcontent["html"].length,
-        "text":msgcontent["html"],
-        "to":msgheader['To'],
-        "from":"me",
-        "subject":msgheader['Subject'],
-        "date":Date.now()
-      }
-      var sentObj = {
-        id:emailconfig.byodimapboxes_ID,
-        d:sentData
-      }
-
-      log(sentObj);
-      _fileCache.cacheThis(sentObj,function(err){
-        if(err)
-        log(err)
-        else{
-          res.send('sent SUCCESS');
+      _email.send(msgheader,msgcontent,function(err,ans){
+        if(err){
+          _fileCache.cacheThis(ans,function(error) {
+            if (error)
+              log(error);
+            else {
+              log('drafted');
+              res.send('DRAFTED');
+            }
+          })
+          log(err);
         }
-      });
+        else{
+          res.send('SENT');
+        }
+      })
+      /*----------------- end directly send -------------------------------------*/
+      //var sentData = {
+      //  "uid":this_uid,
+      //  "modseq":'1',
+      //  "flags":"\\Sent",
+      //  "textcount":msgcontent["html"].length,
+      //  "text":msgcontent["html"],
+      //  "to":msgheader['To'],
+      //  "from":"me",
+      //  "subject":msgheader['Subject'],
+      //  "date":Date.now()
+      //}
+      //var sentObj = {
+      //  id:emailconfig.byodimapboxes_ID,
+      //  d:sentData
+      //}
+      //
+      //log(sentObj);
+      //_fileCache.cacheThis(sentObj,function(err){
+      //  if(err)
+      //  log(err)
+      //  else{
+      //    res.send('sent SUCCESS');
+      //  }
+      //});
 
     })
     /******************************************************************************************s**/

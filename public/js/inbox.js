@@ -4,6 +4,7 @@
 //
 
 console.log(gData);
+console.log(gAttachments);
 
 
 function send() {
@@ -23,9 +24,17 @@ function send() {
     console.log(xmlHttpRequest);
     if(xmlHttpRequest.readyState == 4 && xmlHttpRequest.status == 200){
       $$('popupwin').close();
-      webix.message('sent success',null,20);
+      if(text === 'SENT') {
+        webix.message('sent success', null, 20);
+      }
+      else if(text === 'DRAFTED'){
+        webix.message('sent failed, saved as draft');
+      }
     }
   })
+}
+function upload(){
+  webix.ui(filePopup).show();
 }
 function findContent(messageId){
   var content = null;
@@ -34,6 +43,17 @@ function findContent(messageId){
       content = gData[i];
   }
   return content;
+}
+function findAttachment(msguid){
+  var attachment = [];
+  console.log(msguid);
+
+  for(var i=0;i<gAttachments.length;i++){
+    if(gAttachments[i]['uid'] == msguid){
+      attachment.push(gAttachments[i]);
+    }
+  }
+  return attachment;
 }
 var gridtable = {
     container:"thetable",
@@ -103,7 +123,7 @@ var ui = {rows:[
           gridtable,
           { height: 45, cols:[
             { view:"button", id: "id_reply", type: "icon",  label:"Reply", icon:"reply", width: 95, hidden: true},
-            { view:"button", id: "id_replyall", type: "icon", label:"Reply All", icon:"reply-all", width: 100, hidden: false },
+            //{ view:"button", id: "id_replyall", type: "icon", label:"Reply All", icon:"reply-all", width: 100, hidden: false },
             { view:"button", id: "id_delete", type: "icon", label:"Delete", icon:"times", width: 95,hidden:true },
             {},
             { view:"button", id: "id_prev", type: "icon", icon: "angle-double-left", width: 30, click:prev_page},
@@ -164,6 +184,10 @@ var popup = {
       },
       {
         margin:5,
+        view:"button", value:"Upload Attachments",click:upload
+      },
+      {
+        margin:5,
         cols:[
           { view:"button", id:'id_cancel', value:"cancel",click:"$$('popupwin').close();"},
           { view:"button", value:"send" ,type:"form",click:send}
@@ -174,6 +198,43 @@ var popup = {
   }
 };
 
+var attachmentPopup = {
+  view:"window",
+  width:700,
+  height:300,
+  left:50, top:50,
+  position:"center",
+  move:true,
+  id:"attachmentwin",
+  head:{
+    view:"toolbar", cols:[
+      {view:"label", label: "Attachment" },
+      { view:"button", label: 'Close', width: 90, align: 'right', click:"$$('attachmentwin').close();"}
+    ]
+  },
+  body:{
+    view:"template", id: "attachmentview", scroll:"y", template:"  "
+  }
+};
+
+var filePopup = {
+  view:"window",
+  width:700,
+  height:300,
+  left:50, top:50,
+  position:"center",
+  move:true,
+  id:"filewin",
+  head:{
+    view:"toolbar", cols:[
+      {view:"label", label: "Files" },
+      { view:"button", label: 'Close', width: 90, align: 'right', click:"$$('attachmentwin').close();"}
+    ]
+  },
+  body:{
+    view:"template", id: "fileview", scroll:"y", template:"files"
+  }
+};
 
 var settings = {
   view:"popup", id:"setwindow",
@@ -197,18 +258,29 @@ function prev_page(){
 function next_page(){
   $$("pagerA").select("next");
 }
+
+/*------------------ attachments popup -------------------------------------------------------*/
+function loadDocument(fileName){
+  console.log(fileName);
+  webix.ui(attachmentPopup).show();
+  var iframe = '<iframe src="/viewer/#/attachments/'+fileName+'" width="100%" height="100%"></iframe>';
+  $$('attachmentview').setHTML(iframe);
+}
+
+
+function setupDocLoad() {
+  var x = document.getElementsByClassName("attachment-icon");
+  for(var i = 0; i < x.length; i++){
+    console.log('x node');
+    console.log(x[i]);
+    x[i].setAttribute("onclick", "loadDocument(this.parentElement.getAttribute(\'name\'))");
+  }
+}
+/*--------------------- END attachment popup ------------------------------------------------*/
 webix.ready(function() {
 
   webix.ui(ui);
-  //gridtable = webix.ui(gridtable);
-  //gridtable.getPager().clone({
-  //  template:"{common.first()} {common.prev()} {common.pages()} {common.next()} {common.last()}",
-  //  container:"apage",
-  //  size:10,
-  //  group:5
-  //});
   webix.ui(settings);
-
   $$("$datatable1").bind($$("$tree1"),function(obj,filter){
     return obj.folder == filter.id;
   });
@@ -216,24 +288,37 @@ webix.ready(function() {
   $$("$datatable1").attachEvent("onAfterSelect",function(obj){
     $$("id_reply").show();
     $$("id_delete").show();
-    console.log(obj.id);
+    console.log(obj);
     var this_content = findContent(obj.id);
-    if(this_content != null)
-      $$("mailview").setHTML(this_content['text']);
+    var this_attachment;
+
+    var contentHtml = '';
+    if(this_content != null) {
+      contentHtml += this_content['text'];
+      this_attachment = findAttachment(this_content['uid']);
+    }
+    if(this_attachment.length>0){
+      var spaces = "<br/><br/><br/>";
+      var icon = "";
+      for(var i=0;i<this_attachment.length;i++) {
+        icon += "<div name="+this_attachment[i]['attachmentId']+"."+this_attachment[i]['type']+">";
+        if(this_attachment[i]['type'] === 'pdf') {
+         icon += "<span class='webix_icon attachment-icon fa-file-pdf-o fa-4x'>";
+        }
+        else if(this_attachment[i]['type'] === 'zip'){
+          icon += "<span class='webix_icon attachment-icon fa-file-archive-o fa-4x'>"
+        }
+        else{
+          icon += "<span class='webix_icon attachment-icon fa-file-image-o fa-4x'>";
+        }
+        icon += this_attachment[i]['name']+"."+this_attachment[i]['type']+"</span></div><br/>";
+      }
+      contentHtml += spaces+icon;
+    }
+    $$("mailview").setHTML(contentHtml);
+    setupDocLoad();
   });
 
-
-  $$("id_prev").attachEvent("onItemClick", function(id, e){
-    webix.ajax("/page?id="+gData[$$("$datatable1").getSelectedId().id-1].id, function(text) {
-      console.log(text);
-    });
-  });
-
-  $$("id_next").attachEvent("onItemClick", function(id, e){
-    webix.ajax("/page?id="+gData[$$("$datatable1").getSelectedId().id-1].nextpage, function(text) {
-      console.log(text);
-    });
-  });
 
   $$("$tree1").select(1);
 

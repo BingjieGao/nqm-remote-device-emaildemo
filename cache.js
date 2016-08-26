@@ -1,8 +1,14 @@
 var exports = module.exports = {};
 var https = require("https");
 var fs = require('fs');
+var _ = require('lodash');
+var rootPath = "./public/";
+var attachmentPath = "attachments";
+var docPath = "docViews";
+var path = require("path");
+var dirname = path.dirname('public');
 
-function downloadFile(url, fileName) {
+function downloadFile(url, fileName,cb) {
 
 	var file = fs.createWriteStream(fileName);
 	https.get(url, function(res) {
@@ -13,15 +19,30 @@ function downloadFile(url, fileName) {
 
 	}).on('error', function() {
 			console.log("Could not write file");
+      cb('err');
 
 	});
+}
+function createFolder(name) {
+  var folderPath = rootPath+name+'/';
+  console.log('folder name');
+  console.log(folderPath);
+  try {
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath);
+    }
+  } catch (e) {
+    console.log("createFolder: ",e);
+  }
 }
 
 function cacheFiles(fileList, oldList, token) {
 
 	for (var i = 0; i < fileList.length; i++) {
 		var url = 'https://q.nqminds.com/v1/resource/' + fileList[i].id + '?access_token=' + token;
-		var fileName = './public/fileCache/' + fileList[i].store;
+		var fileName = './public/docViews/' + fileList[i].store;
+    console.log(url);
+    console.log(fileName);
 		fs.stat(fileName, function(err, stats) {
 			if (err) {
 				console.log(this.fileName + " does not exist in cache, downloading")
@@ -32,7 +53,6 @@ function cacheFiles(fileList, oldList, token) {
 				while (j < oldList.length) {
 					if (fileList[this.i].id == oldList[j].id) {
 						if (fileList[this.i].modified != oldList[j].modified){
-							
 					    	console.log(this.fileName + " is out of date, redownloading")
 					    	downloadFile(this.url, this.fileName);
 						}
@@ -67,17 +87,77 @@ function createCache(fileList, token, fileStruct) {
 			if (err) console.log("Failed to write meta to cache");
 			cacheFiles(fileList, oldList, token);
 		})
-		fs.writeFile("fileStruct.json", JSON.stringify(fileStruct), function(err) {
-			if (err) console.log("Failed to write file structure to cache");
-		})
+    if(fileStruct != null) {
+      fs.writeFile("fileStruct.json", JSON.stringify(fileStruct), function (err) {
+        if (err) console.log("Failed to write file structure to cache");
+      })
+    }
 
 	})
 
 	
 
 };
+exports.getAttachments = function(token,fileList,cb){
+  createFolder(attachmentPath);
+  var error = null;
+  if(fileList.length>0){
+    _.forEach(fileList,function(element){
+      var fileName = _.pick(element,["attachmentId"])["attachmentId"];
+      var fileEtx = _.pick(element,["type"])["type"];
+
+      //var url = 'https://q.nqminds.com/v1/datasets?access_token=' + token + '&filter={"baseType":"rawFile","id":"'+fileName+'"}';
+      //console.log('url is');
+      //console.log(url);
+      //https.get(url,function(res){
+      //  var body = '';
+      //  res.on('data',function(chunk){
+      //    body += chunk;
+      //  })
+      //  res.on('end',function(){
+      //    var fileObj = JSON.parse(body);
+      //    console.log('fileObj is ');
+      //    console.log(fileObj);
+      //    console.log(fileObj[0].id);
+      //    //var fileLink = 'https://q.nqminds.com/v1/resource/' + fileObj[0].id + '?access_token=' + token;
+      //    //var file = "./attachments/"+fileObj[0].store;
+      //    //fs.stat(file,function(err,stats){
+      //    //    if(err){
+      //    //      console.log(fileName + " does not exist in attachment, downloading");
+      //    //      downloadFile(fileLink, file,function(err){
+      //    //        if(err)
+      //    //        cb(err);
+      //    //      })
+      //    //    }
+      //    //    else
+      //    //      cb(null);
+      //    //})
+      //  })
+      //})
+
+      var url = 'https://q.nqminds.com/v1/resource/' + fileName + '?access_token=' + token;
+      fileName = rootPath+attachmentPath+'/'+fileName+'.'+fileEtx;
+      console.log(url);
+      console.log(fileName);
+      fs.stat(fileName,function(err,stats){
+        if(err){
+          console.log(fileName + " does not exist in attachment, downloading");
+          downloadFile(url, fileName,function(err){
+            if(err)
+            error = err;
+          })
+        }
+      })
+    })
+  }
+  if(error === null)
+  cb(error);
+  else
+  cb(null);
+}
 
 exports.getFiles = function(cb, token) {
+  createFolder(docPath);
 	var url = 'https://q.nqminds.com/v1/datasets?access_token=' + token + '&filter={"baseType":"rawFile"}';
 
 	https.get(url, function(res) {

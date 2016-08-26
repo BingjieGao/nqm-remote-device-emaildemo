@@ -1454,3 +1454,8 @@ a:active .webix_custom_radio,a:focus .webix_custom_radio{border:1px solid #3498d
 .webix_view.webix_el_label{box-sizing:border-box}
 .webix_inp_label,.webix_inp_top_label,.webix_label_right{margin-bottom:0}
 .webix_view table{border-collapse:initial}
+
+/*attachment*/
+.attachment-icon{
+ cursor:pointer;
+}

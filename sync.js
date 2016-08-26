@@ -3,6 +3,7 @@ module.exports = (function(){
   var request = require("request");
   var util = require('util');
   var _ = require("lodash");
+  var nodemailer = require('nodemailer');
 
   var handleError = function(err, response, log, cb) {
     if (err || response.statusCode !== 200 || (response.body && response.body.error)) {
@@ -19,6 +20,41 @@ module.exports = (function(){
       return false;
     }
   };
+  /*-------------------------- send email script ---------------------*/
+  function sendEmail(sentArray,cb){
+    var transporter = nodemailer.createTransport({
+      service: 'Gmail',
+      auth: {
+        user: 'bingjie@nquiringminds.com', // Your email id
+        pass: 'bingjiegao10' // Your password
+      }
+    });
+    _.forEach(sentArray,function(element){
+      //var replyTo = element['uid']>0?element['uid']:"";
+      var mailOptions = {
+        to: element['to'],
+        cc: element['cc'],
+        subject: element['subject'],
+        html:element['text']
+      }
+      if(element["In-Reply-To"]) {
+        if (element["In-Reply-To"].length > 0) {
+          var ReplyTo = {
+            "In-Reply-To": element["In-Reply-To"]
+          }
+          _.assign(mailOptions, ReplyTo);
+        }
+      }
+      transporter.sendMail(mailOptions,function(err,info){
+        if(err){
+          cb(err,null);
+        }
+        cb(null,info.response);
+      })
+    })
+    log(sentArray);
+
+  }
   /*-------------------------- upsert function -----------------------*/
   function upsertDataBulk(commandHost, accessToken,data, cb) {
     var url = util.format("%s/commandSync/dataset/data/upsertMany", commandHost);
@@ -101,32 +137,44 @@ module.exports = (function(){
     updateData.datasetId = dataId;
     updateData.payload = deletedPayload;
 
-    addDataBulk(self._config.commandHost,self._token,upsertData,function(err,response){
+    //addDataBulk(self._config.commandHost,self._token,upsertData,function(err,response){
+    //  if(err) {
+    //    log(err);
+    //    cb(err,null);
+    //  }
+    //  else {
+    //    addans = response;
+    //    if(upsertans!=null && addans!=null){
+    //      log('not null ans');
+    //      cb(null,upsertans);
+    //    }
+    //  }
+    //});
+    sendEmail(upsertData.payload,function(err,ans){
       if(err) {
-        log(err);
-        cb(err,null);
+        log(err)
+        cb(err, null)
       }
-      else {
-        addans = response;
-        if(upsertans!=null && addans!=null){
-          log('not null ans');
-          cb(null,upsertans);
-        }
-      }
-    });
-    upsertDataBulk(self._config.commandHost,self._token,updateData,function(err,response){
-      if(err){
-        log(err);
-        cb(err,null);
-      }
-      else {
-        upsertans = response;
-        if(upsertans!=null && addans!=null){
-          log('not null ans');
-          cb(null,upsertans);
-        }
+      else{
+        log('noerr');
+        addans = 1;
+        upsertDataBulk(self._config.commandHost,self._token,updateData,function(err,response){
+          if(err){
+            log(err);
+            cb(err,null);
+          }
+          else {
+            upsertans = response;
+            log(addans);
+            if(upsertans!=null && addans!=null){
+              log('not null ans');
+              cb(null,upsertans);
+            }
+          }
+        })
       }
     })
+
   }
 
   return HTTPSync;
