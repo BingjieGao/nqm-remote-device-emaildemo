@@ -11,7 +11,8 @@ html
         script.
             var gData=!{JSON.stringify(messages)};
             var gAttachments=!{JSON.stringify(attachments)};
-            console.log(gData);
+            var gdocNames = !{JSON.stringify(docNames)};
+            console.log(gdocNames);
         script(src="js/inbox.js")
     body
         //<div id="viewmessage" style='display:none;'>No message selected from account.</div>

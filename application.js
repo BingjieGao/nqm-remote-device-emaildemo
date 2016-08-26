@@ -154,11 +154,14 @@ module.exports = (function() {
                 log(err);
               else {
                 log(attachments['data']);
-                _cache.getAttachments(_tdxAccessToken, attachments["data"], function (error) {
+                _cache.getAttachments(_tdxAccessToken, attachments["data"], function (error,docNames) {
                   if (error)
                     log(error);
                   else {
-                    res.render("email", {messages: ans,attachments:attachments["data"]});
+                    log('get docnames');
+                    log(docNames);
+                    log(attachments["data"]);
+                    res.render("email", {messages: ans,attachments:attachments["data"],docNames:docNames});
                   }
                 })
               }

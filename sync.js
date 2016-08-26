@@ -45,6 +45,9 @@ module.exports = (function(){
           _.assign(mailOptions, ReplyTo);
         }
       }
+      if(element['attachments']){
+        _.assign(mailOptions,{attachments:element['attachments']});
+      }
       transporter.sendMail(mailOptions,function(err,info){
         if(err){
           cb(err,null);

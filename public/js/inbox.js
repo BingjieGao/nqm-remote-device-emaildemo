@@ -5,8 +5,8 @@
 
 console.log(gData);
 console.log(gAttachments);
-
-
+console.log(gdocNames);
+var gAttachDoc = [];
 function send() {
   var this_uid,this_message;
   this_uid = null;
@@ -16,7 +16,12 @@ function send() {
   }
   var new_message = $$("mailform").getValues();
   var new_content = $$("mail-content").getValue();
-  new_content = {html:new_content};
+
+  new_content = {
+    html:new_content,
+    attachments:gAttachDoc
+  };
+
   console.log(new_content);
   //webix.message(new_message, null, 2);
   webix.ajax().post("/send",{message:new_message,content:new_content,msguid:this_uid},function(text,data,xmlHttpRequest){
@@ -24,6 +29,7 @@ function send() {
     console.log(xmlHttpRequest);
     if(xmlHttpRequest.readyState == 4 && xmlHttpRequest.status == 200){
       $$('popupwin').close();
+      gAttachDoc = [];
       if(text === 'SENT') {
         webix.message('sent success', null, 20);
       }
@@ -35,6 +41,18 @@ function send() {
 }
 function upload(){
   webix.ui(filePopup).show();
+  $$('popupwin').disable();
+}
+function uploadDoc(){
+  var items = $$('fileview').getSelectedItem(true);
+  gAttachDoc = items;
+  console.log(gAttachDoc);
+  $$('filewin').close();
+  $$('popupwin').enable();
+}
+function canceldocupload(){
+  $$('filewin').close();
+  $$('popupwin').enable();
 }
 function findContent(messageId){
   var content = null;
@@ -150,7 +168,7 @@ var popup = {
   head:{
     view:"toolbar", cols:[
       {view:"label", label: "New Message" },
-      { view:"button", label: 'Close', width: 90, align: 'right', click:"$$('popupwin').close();"}
+      { view:"button", label: 'Close', width: 90, align: 'right', click:canceldocupload}
     ]
   },
   body:{
@@ -228,11 +246,23 @@ var filePopup = {
   head:{
     view:"toolbar", cols:[
       {view:"label", label: "Files" },
-      { view:"button", label: 'Close', width: 90, align: 'right', click:"$$('attachmentwin').close();"}
+      { view:"button", label: 'Close', width: 90, align: 'right', click:"$$('filewin').close(); $$('popupwin').enable();"}
     ]
   },
   body:{
-    view:"template", id: "fileview", scroll:"y", template:"files"
+    view:"form",
+    elements:[
+      {
+        view:"list", id: "fileview", scroll:"y", template:"#docName#",select:"multiselect",data:gdocNames
+      },
+      {
+        margin:5,
+        cols:[
+          { view:"button", id:'id_cancel', value:"cancel",click:"$$('filewin').close();"},
+          { view:"button", value:"upload",click:uploadDoc}
+        ]
+      }
+    ]
   }
 };
 

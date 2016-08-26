@@ -94,12 +94,38 @@ function createCache(fileList, token, fileStruct) {
     }
 
 	})
-
-	
-
 };
+
+function getDocs(){
+  var ans = {};
+  ans.error = null;
+  ans.data = null;
+
+  if(fs.statSync('./fileCache.json')){
+    var fileContent = fs.readFileSync('./fileCache.json','utf8').toString();
+    //console.log(fileContent);
+    ans.data = JSON.parse(fileContent);
+  }
+  //console.log(ans);
+  return ans;
+}
 exports.getAttachments = function(token,fileList,cb){
   createFolder(attachmentPath);
+  var docs = getDocs();
+  var docNames = [];
+  if(docs.data != null){
+    _.forEach(docs.data,function(element){
+      var docName = element['name'];
+      docName += '.'+element['schemaDefinition']['parent'];
+      var docId = element['store']
+      var docNameObj = {
+        docName:docName,
+        docId:docId
+      }
+      docNames.push(docNameObj);
+    })
+  }
+
   var error = null;
   if(fileList.length>0){
     _.forEach(fileList,function(element){
@@ -150,10 +176,12 @@ exports.getAttachments = function(token,fileList,cb){
       })
     })
   }
-  if(error === null)
-  cb(error);
+  if(error === null) {
+    console.log('attachments no error');
+    cb(null,docNames);
+  }
   else
-  cb(null);
+  cb(error,null);
 }
 
 exports.getFiles = function(cb, token) {

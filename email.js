@@ -140,7 +140,7 @@ module.exports = (function() {
       cc: msgheader['Cc'],
       subject: msgheader['Subject'],
       html: msgcontent['html']
-    }
+    };
     var sentData = {
       "uid":msgheader['uid'],
       "modseq":'1',
@@ -151,17 +151,32 @@ module.exports = (function() {
       "from":"me",
       "subject":msgheader['Subject'],
       "date":Date.now()
+    };
+
+    if(msgcontent['attachments'].length>0){
+      var attachArray = [];
+      _.forEach(msgcontent['attachments'],function(o){
+        var attachfileObj = {
+          filename:o['docName'],
+          path:"./public/docViews/"+o['docId']
+        }
+        attachArray.push(attachfileObj);
+      })
+      var attach = {
+        attachments:attachArray
+      }
+      _.assign(mailOptions,attach);
+      _.assign(sentData,attach);
     }
 
     log('sent results are');
-
 
     if(replyTo.length>0){
       var InReplyTo = {
         "In-Reply-To":replyTo
       }
       _.assign(mailOptions,InReplyTo);
-      _assign(sentData,InReplyTo);
+      _.assign(sentData,InReplyTo);
     }
     var sentObj = {
       id:self._config.byodimapboxes_ID,
@@ -169,16 +184,17 @@ module.exports = (function() {
     }
     log(sentObj);
     log(mailOptions);
+    cb('err',sentObj);
 
-    transporter.sendMail(mailOptions,function(err,info){
-      if(err){
-        log(err);
-        cb(err,sentObj);
-      }
-      else {
-        cb(null, info.response);
-      }
-    })
+    //transporter.sendMail(mailOptions,function(err,info){
+    //  if(err){
+    //    log(err);
+    //    cb(err,sentObj);
+    //  }
+    //  else {
+    //    cb(null, info.response);
+    //  }
+    //})
   }
   /*--------------------------- END send function ----------------------------*/
   Inbox.prototype.getAttachmentsList = function(tdxToken,cb){
