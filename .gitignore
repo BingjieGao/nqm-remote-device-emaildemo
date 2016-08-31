@@ -30,3 +30,5 @@ build/Release
 #Cache files
 fileCache.json
 fileStruct.json
+tdxToken.json
+node_modules
