@@ -320,14 +320,14 @@
     {
         "uid": 1471962688374,
         "modseq": "1",
-        "flags": "\\Sent",
+        "flags": "\\deleted",
         "textcount": 143,
         "text": "<p><span style=\"text-decoration: line-through;\"><span style=\"text-decoration: underline;\"><em><strong>123 hello</strong></em></span></span></p>",
         "to": "123@gmail.com",
         "from": "me",
         "subject": "123 hello ",
         "date": "2016-08-23T14:31:28.377Z",
-        "folder": 2
+        "folder": 4
     },
     {
         "uid": 1471966029051,

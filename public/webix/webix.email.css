@@ -1459,3 +1459,10 @@ a:active .webix_custom_radio,a:focus .webix_custom_radio{border:1px solid #3498d
 .attachment-icon{
  cursor:pointer;
 }
+.uploadAttach-icon{
+ cursor:pointer;
+}
+.webix_el_button button{
+ border: 0px solid transparent;
+ border-bottom: 0px solid transparent;;
+}

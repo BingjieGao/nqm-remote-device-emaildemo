@@ -184,17 +184,17 @@ module.exports = (function() {
     }
     log(sentObj);
     log(mailOptions);
-    cb('err',sentObj);
+    //cb('err',sentObj);
 
-    //transporter.sendMail(mailOptions,function(err,info){
-    //  if(err){
-    //    log(err);
-    //    cb(err,sentObj);
-    //  }
-    //  else {
-    //    cb(null, info.response);
-    //  }
-    //})
+    transporter.sendMail(mailOptions,function(err,info){
+      if(err){
+        log(err);
+        cb(err,sentObj);
+      }
+      else {
+        cb(null, info.response);
+      }
+    })
   }
   /*--------------------------- END send function ----------------------------*/
   Inbox.prototype.getAttachmentsList = function(tdxToken,cb){

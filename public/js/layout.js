@@ -4,11 +4,43 @@
 
 webix.debug = true;
 
-secdEventBus = new EventEmitter();
-secdEventBus.defineEvents(["data-added","data-changed","data-removed"]);
+//secdEventBus = new EventEmitter();
+//secdEventBus.defineEvents(["data-added","data-changed","data-removed"]);
 
 var onUserClick = function() {
   window.location.replace("/logout");
+};
+
+function onSettingClick(){
+
+}
+function onViewerClick(){
+  webix.send('/files',null,"GET");
+}
+
+function onEmailClick(){
+  webix.send('/email',null,"GET");
+}
+
+var settings = {
+  view:"popup", id:"setwindow",
+  head:false, width: 100,
+  body:{
+    view:"list", scroll:false,
+    yCount:2, select:true, borderless:true,
+    template:"#lang#",
+    data:[
+      {id:"id_set1", lang:"Logout"},
+      {id:"id_set2", lang:"Settings"}
+    ],
+    on:{"onAfterSelect":function(id){
+      $$("setwindow").hide();
+      if(id == "id_set1"){
+        onUserClick();
+      }
+      else{}
+    }}
+  }
 };
 
 webix.ready(function() {
@@ -21,10 +53,30 @@ webix.ready(function() {
         height: 45,
         elements: [
           { view: "label", template: "<div id='picoHeader'><span class='picoHeaderTitle'>SECD</span>"},
-          {},
+          {
+            id:         "docButton",
+            view:       "button",
+            type:       "iconButton",
+            icon:       "folder",
+            label:      "Doc Viewer",
+            Width: 250,
+            click: onViewerClick,
+            hidden:true
+          },
+          {
+            id:         "emailButton",
+            view:       "button",
+            type:       "iconButton",
+            icon:       "envelope",
+            label:      "SECD Email",
+            Width: 250,
+            click: onEmailClick,
+            hidden:true
+          },
+          {},{},
           {view:"label", template: "<div style='text-align: right;'>toby.ealden</div>" },
-          {view:"icon", icon:"user", click: onUserClick },
-          {view:"icon", icon:"cog"}
+          {view:"icon", icon:"user"},
+          {view:"icon", icon:"cog",popup:"setwindow"}
         ]
       },
       contentUI,
@@ -33,4 +85,5 @@ webix.ready(function() {
       }
     ]
   });
+  webix.ui(settings);
 });

@@ -7,6 +7,20 @@ console.log(gData);
 console.log(gAttachments);
 console.log(gdocNames);
 var gAttachDoc = [];
+
+function onViewerClick(){
+  console.log('click');
+  webix.send('/files',null,"GET");
+}
+
+function onEmailClick(){
+  webix.send('/email',null,"GET");
+}
+var onUserClick = function() {
+  console.log('logout');
+  window.location.replace("/logout");
+}
+
 function send() {
   var this_uid,this_message;
   this_uid = null;
@@ -16,6 +30,9 @@ function send() {
   }
   var new_message = $$("mailform").getValues();
   var new_content = $$("mail-content").getValue();
+  if(new_content == "" || new_message == ""){
+
+  }
 
   new_content = {
     html:new_content,
@@ -24,12 +41,12 @@ function send() {
 
   console.log(new_content);
   //webix.message(new_message, null, 2);
+  gAttachDoc = [];
   webix.ajax().post("/send",{message:new_message,content:new_content,msguid:this_uid},function(text,data,xmlHttpRequest){
     console.log(text);
     console.log(xmlHttpRequest);
     if(xmlHttpRequest.readyState == 4 && xmlHttpRequest.status == 200){
       $$('popupwin').close();
-      gAttachDoc = [];
       if(text === 'SENT') {
         webix.message('sent success', null, 20);
       }
@@ -47,8 +64,30 @@ function uploadDoc(){
   var items = $$('fileview').getSelectedItem(true);
   gAttachDoc = items;
   console.log(gAttachDoc);
+  $$('mailform').removeView('attachViewValue');
+  for(var i=0;i<gAttachDoc.length;i++){
+    $$('mailform').addView({
+      view:"label",
+      label: gAttachDoc[i]['docName']+"<span class='webix_icon uploadAttach-icon fa fa-trash'></span>",
+      id:"attachViewValue",
+      align:"left"
+    },5+i)
+  }
   $$('filewin').close();
   $$('popupwin').enable();
+
+  /*
+   trash attachments sending email
+   */
+
+  var trashAttachment = document.getElementsByClassName('uploadAttach-icon');
+  for(var i=0;i<trashAttachment.length;i++){
+    var trash = trashAttachment[i];
+    trash.addEventListener('click',function(){
+      var thisfilename = this.parentElement.innerHTML;
+      console.log(thisfilename);
+    })
+  }
 }
 function canceldocupload(){
   $$('filewin').close();
@@ -93,15 +132,40 @@ var gridtable = {
     ready:function(){
       console.log(gData);
     }};
-var ui = {rows:[
+var contentUI = {rows:[
   {
     type: "space",
     rows:[
       {
-        view: "toolbar", height: 45, elements:[
-        {view: "label", label: "<span style='font-size: 18px;'>SECD Email Manager</span>"},
-        {view:"icon", id:"id_settings",icon:"cog",popup:"setwindow"}
-      ]
+        view:"toolbar",
+        height: 45,
+        elements: [
+          { view: "label", template: "<div id='picoHeader'><span class='picoHeaderTitle'>SECD</span>"},
+          {
+            id:         "docButton",
+            view:       "button",
+            icon:       "folder",
+            type:       "iconButton",
+            label:      "Doc Viewer",
+            Width: 250,
+            click: onViewerClick,
+            hidden:true
+          },
+          {
+            id:         "emailButton",
+            view:       "button",
+            icon:       "envelope",
+            type:       "iconButton",
+            label:      "SECD Email",
+            Width: 250,
+            click: onEmailClick,
+            hidden:true
+          },
+          {},{},{},
+          {view:"label", template: "<div style='text-align: right;'>toby.ealden</div>" },
+          {view:"icon", icon:"user", click: onUserClick },
+          {view:"icon", icon:"cog",popup:"setwindow"}
+        ]
       },
       {
         type:"wide", cols:[
@@ -157,6 +221,69 @@ var ui = {rows:[
     ]
   }
 ]};
+var form = {
+  view: "form",
+  id:"mailform",
+  elements: [
+    {
+      view: "text",
+      id:"reply-address",
+      name: "To",
+      label: "To",
+      labelWidth: "100",
+      required:true,
+      validate:webix.rules.isNotEmpty,
+      invalidMessage: "To address cannot be empty"
+    },
+    {
+      view: "text",
+      name: "Cc",
+      label: "Cc",
+      labelWidth: "100"
+    },
+    {
+      view: "text",
+      id:"subject",
+      name: "Subject",
+      label: "Subject",
+      labelWidth: "100",
+    },
+    {
+      id:'mail-content',
+      name:"mail-content",
+      view:"tinymce-editor",
+      height:150
+    },
+    {
+      margin:5,
+      view:"button", value:"Upload Attachments",click:upload
+    },
+    {
+      margin:5,
+      cols:[
+        { view:"button", id:'id_cancelpopup', value:"cancel",click:"console.log('popwin close');$$('popupwin').close();"},
+        { view:"button", value:"send",click:function(){
+          if($$('reply-address').validate()){
+            send(); 
+          }
+        }}
+      ]
+    }
+  ],
+  rules:{
+    "To": webix.rules.isNotEmpty,
+    "mail-content": webix.rules.isNotEmpty
+  },
+  select:true,
+  elementsConfig:{
+    labelAlign:"right",
+    on:{
+      'onChange':function(newv, oldv){
+        this.validate();
+      }
+    }
+  }
+}
 
 var popup = {
   view:"window",
@@ -168,52 +295,10 @@ var popup = {
   head:{
     view:"toolbar", cols:[
       {view:"label", label: "New Message" },
-      { view:"button", label: 'Close', width: 90, align: 'right', click:canceldocupload}
+      { view:"button", label: 'Close', width: 90, align: 'right', click:"$$('popupwin').close()"}
     ]
   },
-  body:{
-    view: "form",
-    id:"mailform",
-    elements: [
-      {
-        view: "text",
-        id:"reply-address",
-        name: "To",
-        label: "To",
-        labelWidth: "100"
-      },
-      {
-        view: "text",
-        name: "Cc",
-        label: "Cc",
-        labelWidth: "100"
-      },
-      {
-        view: "text",
-        id:"subject",
-        name: "Subject",
-        label: "Subject",
-        labelWidth: "100"
-      },
-      {
-        id:'mail-content',
-        view:"tinymce-editor",
-        height:150
-      },
-      {
-        margin:5,
-        view:"button", value:"Upload Attachments",click:upload
-      },
-      {
-        margin:5,
-        cols:[
-          { view:"button", id:'id_cancel', value:"cancel",click:"$$('popupwin').close();"},
-          { view:"button", value:"send" ,type:"form",click:send}
-        ]
-      }
-    ],
-    select:true
-  }
+  body:form
 };
 
 var attachmentPopup = {
@@ -258,7 +343,7 @@ var filePopup = {
       {
         margin:5,
         cols:[
-          { view:"button", id:'id_cancel', value:"cancel",click:"$$('filewin').close();"},
+          { view:"button", id:'id_cancel', value:"cancel",click:"$$('filewin').close(); $$('popupwin').enable();"},
           { view:"button", value:"upload",click:uploadDoc}
         ]
       }
@@ -275,13 +360,22 @@ var settings = {
     template:"#lang#",
     data:[
       {id:"id_set1", lang:"Logout"},
-      {id:"id_set2", lang:"French"}
+      {id:"id_set2", lang:"Settings"}
     ],
-    on:{"onAfterSelect":function(){
+    on:{"onAfterSelect":function(id){
       $$("setwindow").hide();
+      if(id == "id_set1"){
+        onUserClick();
+      }
+      else if(id == "id_set2"){
+
+      }
     }}
   }
 };
+
+
+
 function prev_page(){
   $$("pagerA").select("prev");
 }
@@ -309,8 +403,10 @@ function setupDocLoad() {
 /*--------------------- END attachment popup ------------------------------------------------*/
 webix.ready(function() {
 
-  webix.ui(ui);
+  webix.ui(contentUI);
   webix.ui(settings);
+  $$("emailButton").show();
+  $$('docButton').show();
   $$("$datatable1").bind($$("$tree1"),function(obj,filter){
     return obj.folder == filter.id;
   });
@@ -398,5 +494,10 @@ webix.ready(function() {
       }
     })
   });
+
+  $$('id_cancelpopup').attachEvent('onItemClick',function(){
+    console.log('popwin close');
+    $$('popupwin').close();
+  })
 
 });

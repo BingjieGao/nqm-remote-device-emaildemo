@@ -101,10 +101,13 @@ function getDocs(){
   ans.error = null;
   ans.data = null;
 
-  if(fs.statSync('./fileCache.json')){
-    var fileContent = fs.readFileSync('./fileCache.json','utf8').toString();
-    //console.log(fileContent);
-    ans.data = JSON.parse(fileContent);
+  try {
+    if(fs.statSync('./fileCache.json')) {
+      var fileContent = fs.readFileSync('./fileCache.json', 'utf8').toString();
+      //console.log(fileContent);
+      ans.data = JSON.parse(fileContent);
+    }
+  }catch(e){
   }
   //console.log(ans);
   return ans;

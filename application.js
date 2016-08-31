@@ -47,7 +47,7 @@ module.exports = (function() {
     if (!err) {
       log("tdx %s", (reconnect ? "re-connected" : "connected"));
       if (_tdxAccessToken) {
-        _subscriptionManager.setAccessToken(_tdxAccessToken);
+        //_subscriptionManager.setAccessToken(_tdxAccessToken);
       }
     } else {
       log("tdx connection failed: %s",err.message);
@@ -91,7 +91,7 @@ module.exports = (function() {
       var q = querystring.parse(up.query);
       if (q.access_token) {
         _tdxAccessToken = q.access_token;
-        _subscriptionManager.setAccessToken(q.access_token);
+        //_subscriptionManager.setAccessToken(q.access_token);
         response.writeHead(301, {Location: config.hostURL});
 
         /*assign _sync value with tdxAccessToken*/
@@ -247,7 +247,7 @@ module.exports = (function() {
     
     app.get("/logout", function(request, response) {
       _tdxAccessToken = "";
-      _tdxLogin("");
+      //_tdxLogin("");
       response.redirect("/login");
     });
         
@@ -258,8 +258,8 @@ module.exports = (function() {
     });
   
     _tdxConnection.start(config, tdxConnectionHandler);
-    _appServer.start(config, server, _tdxConnection);
-    _subscriptionManager.initialise(config, _tdxConnection, _appServer);
+   // _appServer.start(config, server, _tdxConnection);
+    //_subscriptionManager.initialise(config, _tdxConnection, _appServer);
   };
   
   return {
