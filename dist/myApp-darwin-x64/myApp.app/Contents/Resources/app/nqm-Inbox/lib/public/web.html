@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="./webix/webix.css" type="text/css" charset="utf-8">
+        <script src="./webix/webix.js" type="text/javascript" charset="utf-8"></script>
+        <script type="text/javascript">
+            webix.require.disabled = true;
+            webix.codebase = "http://cdn.webix.com/components/tinymce/";
+        </script>
+        <script src="http://cdn.webix.com/components/tinymce/tinymce.js"></script>
+        <script src="http://cdn.webix.com/components/tinymce/tinymce/tiny_mce.js"></script>
+    </head>
+    <body>
+    <div id="areaA"></div>
+        <script type="text/javascript" charset="utf-8">
+            webix.ui({
+
+                     id:'editor', view:"tinymce-editor"
+
+
+            })
+
+        </script>
+    </body>
+</html>
